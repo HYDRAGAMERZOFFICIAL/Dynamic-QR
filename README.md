@@ -8,11 +8,13 @@ Dynamic QR is a web application for creating permanent, customizable QR codes an
 
 - Universal audience: personal users, students, professionals and businesses.
 - QR Studio with scan-safe 2D, artistic 2D and 3D-inspired presentations.
+- Starter templates for personal profiles, businesses, social profiles, document hubs, image galleries, link collections and custom pages.
 - Three active QR codes per account. Paused or archived codes do not count toward the active limit.
 - Content sections for profile/contact details, social links, business information, images, documents and custom links.
 - Draft and explicit Publish workflow. Public visitors only see the latest published snapshot.
 - Optional password protection per QR code.
 - Fully customizable public landing pages.
+- Owner-scoped scan analytics with per-QR totals and a 14-day trend.
 - PNG/SVG downloads and mobile-first public pages.
 
 ## Stack
