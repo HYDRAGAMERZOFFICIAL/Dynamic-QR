@@ -1,5 +1,5 @@
 import { supabase } from './supabase'
-import { defaultDesign, emptyContent, type QRDesign, type QRRecord } from '../types'
+import { defaultDesign, emptyContent, type QRContent, type QRDesign, type QRRecord } from '../types'
 
 const STORAGE_KEY = 'dynamic-qr-workspace-v1'
 type Stored = { qrs: QRRecord[] }
@@ -21,23 +21,50 @@ const fromRow = (row: any): QRRecord => ({
   draft: { ...emptyContent(), ...(row.draft_content || {}) }, published: { ...emptyContent(), ...(row.published_content || {}) },
   createdAt: row.created_at, publishedAt: row.published_at || undefined, scans: 0,
 })
+export type AnalyticsData = {
+  totalScans: number
+  qrCodes: { id: string; title: string; slug: string; scans: number }[]
+  daily: { date: string; scans: number }[]
+}
+
+export async function getAnalytics(): Promise<AnalyticsData> {
+  if (supabase) {
+    const { data, error } = await supabase.rpc('get_qr_analytics')
+    if (error) throw error
+    return {
+      totalScans: Number(data?.total_scans || 0),
+      qrCodes: (data?.qr_codes || []).map((item: { qr_id: string; title: string; slug: string; scans: number }) => ({
+        id: item.qr_id, title: item.title, slug: item.slug, scans: Number(item.scans || 0),
+      })),
+      daily: (data?.daily || []).map((item: { date: string; scans: number }) => ({ date: item.date, scans: Number(item.scans || 0) })),
+    }
+  }
+  const qrs = read().qrs
+  return { totalScans: qrs.reduce((sum, qr) => sum + qr.scans, 0), qrCodes: qrs.map(qr => ({ id: qr.id, title: qr.title, slug: qr.slug, scans: qr.scans })), daily: [] }
+}
+
 export async function listQrs(): Promise<QRRecord[]> {
   if (supabase) {
     const { data, error } = await supabase.from('qr_codes').select('*').order('created_at', { ascending: false })
     if (error) throw error
-    return (data || []).map(fromRow)
+    const analytics = await getAnalytics()
+    const counts = new Map(analytics.qrCodes.map(item => [item.id, item.scans]))
+    return (data || []).map(row => ({ ...fromRow(row), scans: counts.get(row.id) || 0 }))
   }
   return read().qrs
 }
-export async function createQr(title: string, design: QRDesign): Promise<QRRecord> {
+export async function createQr(title: string, design: QRDesign, initialContent: QRContent = emptyContent()): Promise<QRRecord> {
   if (supabase) {
     const { data, error } = await supabase.rpc('create_qr', { p_title: title, p_design: design }).single()
     if (error) throw error
-    return fromRow(data)
+    const created = fromRow(data)
+    const next = { ...created, draft: initialContent }
+    await saveQr(next)
+    return next
   }
   const state = read()
   if (state.qrs.filter(q => q.status === 'active').length >= 3) throw new Error('You can have up to three active QR codes. Pause or archive one to free a slot.')
-  const record: QRRecord = { id: crypto.randomUUID(), slug: crypto.randomUUID().replaceAll('-', '').slice(0, 12), title: title.trim() || 'Untitled QR', status: 'active', design, draft: emptyContent(), published: emptyContent(), createdAt: new Date().toISOString(), scans: 0 }
+  const record: QRRecord = { id: crypto.randomUUID(), slug: crypto.randomUUID().replaceAll('-', '').slice(0, 12), title: title.trim() || 'Untitled QR', status: 'active', design, draft: initialContent, published: emptyContent(), createdAt: new Date().toISOString(), scans: 0 }
   state.qrs.unshift(record); write(state); return record
 }
 export async function saveQr(qr: QRRecord): Promise<void> {

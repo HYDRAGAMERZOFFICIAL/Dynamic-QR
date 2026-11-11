@@ -26,6 +26,7 @@ Deno.serve(async (request: Request) => {
     const { data, error } = await publicClient.rpc('get_qr_content', {
       p_slug: slug,
       p_password: typeof password === 'string' ? password : null,
+      p_user_agent: request.headers.get('user-agent')?.slice(0, 500) ?? null,
     })
     if (error) throw error
     if (!data) return Response.json({ error: 'Destination unavailable' }, { status: 404, headers: cors })
