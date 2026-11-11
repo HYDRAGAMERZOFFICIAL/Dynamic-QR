@@ -5,9 +5,13 @@ export type QRDesign = {
   background: string
   corner: 'square' | 'extra-rounded' | 'dot'
   frame: 'none' | 'scan' | 'badge'
+  depth: boolean
+  pageBackground: string
+  pageAccent: string
+  pageLayout: 'centered' | 'wide'
 }
 export type QRLink = { id: string; label: string; url: string }
-export type QRFile = { id: string; name: string; type: string; size: number; dataUrl?: string; storagePath?: string }
+export type QRFile = { id: string; name: string; type: string; size: number; dataUrl?: string; storagePath?: string; signedUrl?: string }
 export type QRContent = {
   name: string
   headline: string
@@ -38,5 +42,5 @@ export const emptyContent = (): QRContent => ({
   links: [], files: [], sections: [],
 })
 export const defaultDesign: QRDesign = {
-  style: 'square', foreground: '#17152b', background: '#ffffff', corner: 'extra-rounded', frame: 'scan',
+  style: 'square', foreground: '#17152b', background: '#ffffff', corner: 'extra-rounded', frame: 'scan', depth: false, pageBackground: '#f5f6fb', pageAccent: '#806be0', pageLayout: 'centered',
 }

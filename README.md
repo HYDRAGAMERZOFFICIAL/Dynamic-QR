@@ -29,7 +29,7 @@ Dynamic QR is a web application for creating permanent, customizable QR codes an
 3. Copy `.env.example` to `.env.local`.
 4. For backend mode, create a Supabase project and set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
 5. Apply the database migration: `npx supabase db push` (after linking your project), or run `supabase/migrations/202611110001_initial_schema.sql` in the Supabase SQL editor.
-6. Start the app: `npm run dev`.
+6. Deploy the public asset signer: `supabase functions deploy public-qr-content` (the function uses Supabase's server-side service-role environment variable).\n7. Start the app: `npm run dev`.
 
 Without Supabase credentials, the app runs in local demo mode and stores demo content in the current browser. Demo mode is for UI evaluation only: it does not provide multi-device sync, secure account isolation, or server-enforced password protection. Configure Supabase before production use.
 

@@ -42,7 +42,7 @@ export async function createQr(title: string, design: QRDesign): Promise<QRRecor
 }
 export async function saveQr(qr: QRRecord): Promise<void> {
   if (supabase) {
-    const { error } = await supabase.from('qr_codes').update({ title: qr.title, design: qr.design, draft_content: qr.draft, status: qr.status, updated_at: new Date().toISOString() }).eq('id', qr.id)
+    const { error } = await supabase.from('qr_codes').update({ title: qr.title, design: qr.design, draft_content: qr.draft, updated_at: new Date().toISOString() }).eq('id', qr.id)
     if (error) throw error
     return
   }
@@ -69,20 +69,23 @@ export async function setQrPassword(qr: QRRecord, password: string): Promise<voi
 }
 export async function getPublicQr(slug: string, password?: string): Promise<{ qr?: QRRecord; passwordRequired?: boolean; invalidPassword?: boolean }> {
   if (supabase) {
-    const { data, error } = await supabase.rpc('get_qr_content', { p_slug: slug, p_password: password || null })
+    const { data, error } = await supabase.functions.invoke('public-qr-content', { body: { slug, password: password || null } })
     if (error) throw error
     if (!data) return {}
     if (data.password_required) return { passwordRequired: true, invalidPassword: Boolean(password) }
     return { qr: { id: slug, slug, title: data.title, status: 'active', design: { ...defaultDesign, ...(data.design || {}) }, draft: emptyContent(), published: { ...emptyContent(), ...(data.content || {}) }, createdAt: '', publishedAt: data.published_at, scans: 0 } }
   }
   const qr = read().qrs.find(item => item.slug === slug && item.status === 'active')
-  if (!qr) return {}
+  if (!qr || !qr.publishedAt) return {}
   if (qr.password && qr.password !== password) return { passwordRequired: true, invalidPassword: Boolean(password) }
   const next = { ...qr, scans: qr.scans + 1 }
   await saveQr(next)
   return { qr: { ...next, draft: next.published } }
 }
-export async function updateStatus(qr: QRRecord, status: QRRecord['status']): Promise<void> { await saveQr({ ...qr, status }) }
+export async function updateStatus(qr: QRRecord, status: QRRecord['status']): Promise<void> {
+  if (supabase) { const { error } = await supabase.rpc('set_qr_status', { p_qr_id: qr.id, p_status: status }); if (error) throw error; return }
+  await saveQr({ ...qr, status })
+}
 export async function uploadAsset(qr: QRRecord, file: File): Promise<{ storagePath?: string; dataUrl?: string }> {
   if (supabase) {
     const { data: auth } = await supabase.auth.getUser()
