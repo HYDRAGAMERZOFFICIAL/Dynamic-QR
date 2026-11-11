@@ -114,6 +114,16 @@ export async function updateStatus(qr: QRRecord, status: QRRecord['status']): Pr
   await saveQr({ ...qr, status })
 }
 export async function uploadAsset(qr: QRRecord, file: File): Promise<{ storagePath?: string; dataUrl?: string }> {
+  const allowedTypes = new Set([
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'image/png',
+    'image/jpeg',
+    'image/webp',
+  ])
+  if (!allowedTypes.has(file.type)) throw new Error('Unsupported file type. Upload PDF, DOC, DOCX, PNG, JPG or WEBP files.')
+  if (file.size > 25 * 1024 * 1024) throw new Error('Files must be 25 MB or smaller.')
   if (supabase) {
     const { data: auth } = await supabase.auth.getUser()
     if (!auth.user) throw new Error('Please sign in before uploading files.')
@@ -122,7 +132,10 @@ export async function uploadAsset(qr: QRRecord, file: File): Promise<{ storagePa
     const { error } = await supabase.storage.from('qr-assets').upload(storagePath, file, { contentType: file.type, upsert: false })
     if (error) throw error
     const { error: metadataError } = await supabase.from('qr_files').insert({ qr_id: qr.id, owner_id: auth.user.id, storage_path: storagePath, file_name: file.name, mime_type: file.type, size_bytes: file.size })
-    if (metadataError) throw metadataError
+    if (metadataError) {
+      await supabase.storage.from('qr-assets').remove([storagePath])
+      throw metadataError
+    }
     return { storagePath }
   }
   if (file.size > 3 * 1024 * 1024) throw new Error('Demo mode supports files up to 3 MB. Configure Supabase Storage for larger files.')
