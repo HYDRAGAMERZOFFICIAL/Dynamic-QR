@@ -1,5 +1,5 @@
-import { isSupabaseConfigured, supabase } from './supabase'
-import { defaultDesign, emptyContent, type QRContent, type QRDesign, type QRRecord } from '../types'
+import { supabase } from './supabase'
+import { defaultDesign, emptyContent, type QRDesign, type QRRecord } from '../types'
 
 const STORAGE_KEY = 'dynamic-qr-workspace-v1'
 type Stored = { qrs: QRRecord[] }
